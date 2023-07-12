@@ -1,0 +1,115 @@
+import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.random.Well19937c;
+
+public class GibbsSamplingExample {
+    public static void main(String[] args) {
+        // Set the initial values
+        double beta0 = 0.0;
+        double beta1 = 0.0;
+        double sigma = 1.0;
+
+        // Set the data
+        double[] x = {1.0, 2.0, 3.0, 4.0, 5.0};  // example x values
+        double[] y = {2.0, 4.0, 6.0, 8.0, 10.0}; // example y values
+        int N = x.length;                        // number of data points
+
+        // Set up the random number generator
+        RandomGenerator rng = new Well19937c();
+
+        // Set up the conditional distributions
+        NormalDistribution beta0Distribution = new NormalDistribution(0, 0.001);
+        NormalDistribution beta1Distribution = new NormalDistribution(0, 0.001);
+        NormalDistribution sigmaDistribution = new NormalDistribution(0, 0.001);
+
+        // Run the Gibbs sampler
+        int iterations = 1000;
+        for (int i = 0; i < iterations; i++) {
+            // Sample beta0 conditioned on beta1 and sigma
+            double beta0Sample = beta0Distribution.sample() + beta1 * x[0];
+            // Sample beta1 conditioned on beta0, x, and sigma
+            double beta1Sample = beta1Distribution.sample() + beta0 + sigma * x[1];
+            // Sample sigma conditioned on beta0, beta1, and x
+            double sigmaSample = sigmaDistribution.sample() + beta0 + beta1 * x[2];
+
+            // Update the values
+            beta0 = beta0Sample;
+            beta1 = beta1Sample;
+            sigma = sigmaSample;
+        }
+
+        // Use the sampled values for analysis or further processing
+        // ...
+    }
+}
+
+
+
+import org.apache.commons.math3.distribution.UniformRealDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.random.Well19937c;
+
+public class UniformSamplingExample {
+    public static void main(String[] args) {
+        // Set up the random number generator
+        RandomGenerator rng = new Well19937c();
+
+        // Set up the uniform distribution
+        double lowerBound = 0.0;  // lower bound of the uniform distribution
+        double upperBound = 1.0;  // upper bound of the uniform distribution
+        UniformRealDistribution uniformDistribution = new UniformRealDistribution(rng, lowerBound, upperBound);
+
+        // Draw a sample from the uniform distribution
+        double sample = uniformDistribution.sample();
+
+        // Print the sampled value
+        System.out.println("Sampled value: " + sample);
+    }
+}
+
+
+////////
+import org.apache.commons.math3.distribution.NormalDistribution;
+
+public class InverseNormalCDFExample {
+    public static void main(String[] args) {
+        // Set up the parameters
+        double probabilityOfDefault = 0.1;  // probability of default
+        double mean = 0.0;                  // mean of the normal distribution
+        double standardDev = 1.0;           // standard deviation of the normal distribution
+
+        // Calculate the inverse CDF
+        NormalDistribution standardNormalDistribution = new NormalDistribution(mean, standardDev);
+        double u = standardNormalDistribution.inverseCumulativeProbability(probabilityOfDefault);
+
+        // Calculate the CDF of the transformed value
+        NormalDistribution transformedDistribution = new NormalDistribution(mean, standardDev);
+        double cdf = transformedDistribution.cumulativeProbability(u);
+
+        // Print the result
+        System.out.println("CDF: " + cdf);
+    }
+}
+
+
+///////
+import org.apache.commons.math3.distribution.NormalDistribution;
+
+public class InverseNormalCDFExample {
+    public static void main(String[] args) {
+        // Set up the parameters
+        double U = 0.2;  // Given value
+        double FB = 100.0; // Scaling factor for U
+
+        // Calculate the inverse CDF
+        double mean = 0.0;       // mean of the normal distribution
+        double standardDev = 1.0;  // standard deviation of the normal distribution
+        NormalDistribution normalDistribution = new NormalDistribution(mean, standardDev);
+
+        double inverseCDF = normalDistribution.inverseCumulativeProbability(U * FB);
+
+        // Print the result
+        System.out.println("Inverse CDF: " + inverseCDF);
+    }
+}
+

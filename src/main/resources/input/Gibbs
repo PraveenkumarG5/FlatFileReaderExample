@@ -113,3 +113,9 @@ public class InverseNormalCDFExample {
     }
 }
 
+-----------------------------
+InverseCDF
+
+// Calculate the inverse CDF (quantile function) of the normal distribution for each element.
+        INDArray transformedArray = inputArray.mul(2.0).sub(1.0);
+        INDArray inverseCDF = Nd4j.getExecutioner().execAndReturn(new Erf(transformedArray)).mul(Math.sqrt(2.0));

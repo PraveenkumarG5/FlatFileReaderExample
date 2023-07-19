@@ -119,3 +119,14 @@ InverseCDF
 // Calculate the inverse CDF (quantile function) of the normal distribution for each element.
         INDArray transformedArray = inputArray.mul(2.0).sub(1.0);
         INDArray inverseCDF = Nd4j.getExecutioner().execAndReturn(new Erf(transformedArray)).mul(Math.sqrt(2.0));
+
+
+INDArray inverseCDF = Nd4j.create(probabilities.length);
+
+        // Using Apache Commons Math NormalDistribution to compute the inverse CDF
+        NormalDistribution normalDistribution = new NormalDistribution();
+        for (int i = 0; i < probabilities.length; i++) {
+            double probability = probabilities[i];
+            double quantile = normalDistribution.inverseCumulativeProbability(probability);
+            inverseCDF.putScalar(i, quantile);
+        }

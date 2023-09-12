@@ -1,0 +1,241 @@
+import java.util.Arrays;
+
+public class CorrelationCalculator {
+    public static void main(String[] args) {
+        double[] price1 = {10.0, 12.0, 14.0, 16.0, 18.0}; // Replace with your first set of prices
+        double[] price2 = {8.0, 11.0, 13.0, 15.0, 17.0};  // Replace with your second set of prices
+
+        double correlation = calculateCorrelation(price1, price2);
+
+        System.out.println("Correlation: " + correlation);
+    }
+
+    public static double calculateCorrelation(double[] data1, double[] data2) {
+        if (data1.length != data2.length) {
+            throw new IllegalArgumentException("Input arrays must have the same length.");
+        }
+
+        int n = data1.length;
+
+        double sum1 = 0.0;
+        double sum2 = 0.0;
+        double sum1Sq = 0.0;
+        double sum2Sq = 0.0;
+        double productSum = 0.0;
+
+        for (int i = 0; i < n; i++) {
+            double x = data1[i];
+            double y = data2[i];
+
+            sum1 += x;
+            sum2 += y;
+            sum1Sq += x * x;
+            sum2Sq += y * y;
+            productSum += x * y;
+        }
+
+        double numerator = n * productSum - sum1 * sum2;
+        double denominator = Math.sqrt((n * sum1Sq - sum1 * sum1) * (n * sum2Sq - sum2 * sum2));
+
+        if (denominator == 0.0) {
+            // Handle the case where the denominator is zero (division by zero)
+            return 0.0; // You can choose to return 0 or handle this case differently based on your requirements
+        }
+
+        return numerator / denominator;
+    }
+}
+
+
+
+--------------------------
+
+public class LogarithmicReturnCalculator {
+    public static void main(String[] args) {
+        double initialPrice = 100.0; // Replace with the initial price
+        double finalPrice = 120.0;   // Replace with the final price
+
+        double logarithmicReturn = calculateLogarithmicReturn(initialPrice, finalPrice);
+
+        System.out.println("Logarithmic return: " + logarithmicReturn);
+    }
+
+    public static double calculateLogarithmicReturn(double initialPrice, double finalPrice) {
+        if (initialPrice <= 0 || finalPrice <= 0) {
+            throw new IllegalArgumentException("Prices must be greater than zero.");
+        }
+
+        // Calculate the logarithmic return using the formula: ln(finalPrice / initialPrice)
+        return Math.log(finalPrice / initialPrice);
+    }
+}
+
+
+---------------------
+
+import java.util.Arrays;
+
+public class CorrelationCalculator {
+    public static void main(String[] args) {
+        // Replace these arrays with your price data
+        double[] priceSet1 = {10.0, 12.0, 14.0, 16.0, 18.0};
+        double[] priceSet2 = {8.0, 9.0, 10.0, 11.0, 12.0};
+
+        double correlation = calculateCorrelation(priceSet1, priceSet2);
+
+        System.out.println("Correlation coefficient: " + correlation);
+    }
+
+    public static double calculateCorrelation(double[] data1, double[] data2) {
+        if (data1.length != data2.length) {
+            throw new IllegalArgumentException("Both data sets must have the same length.");
+        }
+
+        int n = data1.length;
+
+        // Calculate the mean of each data set
+        double mean1 = Arrays.stream(data1).average().orElse(Double.NaN);
+        double mean2 = Arrays.stream(data2).average().orElse(Double.NaN);
+
+        // Calculate the numerator and denominators for the correlation formula
+        double numerator = 0.0;
+        double denominator1 = 0.0;
+        double denominator2 = 0.0;
+
+        for (int i = 0; i < n; i++) {
+            double deviation1 = data1[i] - mean1;
+            double deviation2 = data2[i] - mean2;
+
+            numerator += deviation1 * deviation2;
+            denominator1 += deviation1 * deviation1;
+            denominator2 += deviation2 * deviation2;
+        }
+
+        // Calculate the correlation coefficient
+        double correlation = numerator / (Math.sqrt(denominator1) * Math.sqrt(denominator2));
+
+        return correlation;
+    }
+}
+
+
+--------------------
+
+import java.util.Arrays;
+
+public class CorrelationCalculator {
+    public static void main(String[] args) {
+        double[] asset1Prices = {100.0, 105.0, 110.0, 115.0, 120.0}; // Replace with the prices of asset 1
+        double[] asset2Prices = {50.0, 55.0, 60.0, 65.0, 70.0};    // Replace with the prices of asset 2
+
+        if (asset1Prices.length != asset2Prices.length) {
+            throw new IllegalArgumentException("Both asset price arrays must have the same length.");
+        }
+
+        double correlation = calculateCorrelation(asset1Prices, asset2Prices);
+
+        System.out.println("Correlation between asset 1 and asset 2: " + correlation);
+    }
+
+    public static double calculateCorrelation(double[] prices1, double[] prices2) {
+        int n = prices1.length;
+        if (n != prices2.length) {
+            throw new IllegalArgumentException("Both price arrays must have the same length.");
+        }
+
+        double mean1 = Arrays.stream(prices1).average().orElse(0);
+        double mean2 = Arrays.stream(prices2).average().orElse(0);
+
+        double sumProduct = 0.0;
+        double sumSquaredPrices1 = 0.0;
+        double sumSquaredPrices2 = 0.0;
+
+        for (int i = 0; i < n; i++) {
+            double deviation1 = prices1[i] - mean1;
+            double deviation2 = prices2[i] - mean2;
+
+            sumProduct += deviation1 * deviation2;
+            sumSquaredPrices1 += deviation1 * deviation1;
+            sumSquaredPrices2 += deviation2 * deviation2;
+        }
+
+        double correlation = sumProduct / (Math.sqrt(sumSquaredPrices1) * Math.sqrt(sumSquaredPrices2));
+        return correlation;
+    }
+}
+
+--------------
+
+To calculate the correlation between two sets of prices in Java, you can use the Apache Commons Math library, which provides statistical functions including correlation calculation. You'll need to add the Apache Commons Math library to your project. You can download the library from the Apache Commons Math website (https://commons.apache.org/proper/commons-math/) or use a dependency management tool like Maven or Gradle.
+
+Here's a Java code snippet to calculate the correlation between two sets of prices using Apache Commons Math:
+
+java
+Copy code
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+
+public class CorrelationCalculator {
+    public static void main(String[] args) {
+        double[] prices1 = {100.0, 110.0, 120.0, 130.0, 140.0}; // Replace with your first set of prices
+        double[] prices2 = {200.0, 210.0, 220.0, 230.0, 240.0}; // Replace with your second set of prices
+
+        double correlation = calculateCorrelation(prices1, prices2);
+
+        System.out.println("Correlation between the two sets of prices: " + correlation);
+    }
+
+    public static double calculateCorrelation(double[] data1, double[] data2) {
+        if (data1.length != data2.length) {
+            throw new IllegalArgumentException("Both arrays must have the same length.");
+        }
+
+        PearsonsCorrelation correlationCalculator = new PearsonsCorrelation();
+        return correlationCalculator.correlation(data1, data2);
+    }
+}
+In this code:
+
+prices1 and prices2 represent the two sets of prices for which you want to calculate the correlation. Replace these arrays with your specific price data.
+
+The calculateCorrelation method takes two arrays of data (data1 and data2) and calculates the Pearson correlation coefficient between them using the PearsonsCorrelation class from Apache Commons Math.
+
+The calculated correlation coefficient is then printed to the console.
+
+Make sure you have the Apache Commons Math library in your project's classpath to run this code successfully.
+
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------
+Log return
+
+----------
+
+
+
+public class LogarithmicReturnCalculator {
+    public static void main(String[] args) {
+        double initialPrice = 100.0; // Replace with the initial price
+        double finalPrice = 120.0;   // Replace with the final price
+
+        double logarithmicReturn = calculateLogarithmicReturn(initialPrice, finalPrice);
+
+        System.out.println("Logarithmic return: " + logarithmicReturn);
+    }
+
+    public static double calculateLogarithmicReturn(double initialPrice, double finalPrice) {
+        if (initialPrice <= 0 || finalPrice <= 0) {
+            throw new IllegalArgumentException("Prices must be greater than zero.");
+        }
+
+        // Calculate the logarithmic return using the formula: ln(finalPrice / initialPrice)
+        return Math.log(finalPrice / initialPrice);
+    }
+}

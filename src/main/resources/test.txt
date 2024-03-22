@@ -1,0 +1,72 @@
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("com.h2database:h2") // Or any other database driver you're using
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+}
+
+
+import javax.persistence.Entity
+import javax.persistence.Id
+
+@Entity
+data class Configuration(
+    @Id
+    val id: Long,
+    val propertyName: String,
+    val propertyValue: String
+)
+
+
+import org.springframework.data.jpa.repository.JpaRepository
+
+interface ConfigurationRepository : JpaRepository<Configuration, Long> {
+    fun findByPropertyName(propertyName: String): Configuration?
+}
+
+
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Service
+import org.springframework.scheduling.annotation.Scheduled
+
+@Service
+class ConfigurationService(private val configurationRepository: ConfigurationRepository) {
+
+    private val properties: MutableMap<String, String> = mutableMapOf()
+
+    init {
+        loadConfiguration()
+    }
+
+    fun getProperty(propertyName: String): String? {
+        return properties[propertyName]
+    }
+
+    @Scheduled(fixedRate = 60000) // Check for updates every minute
+    fun reloadConfiguration() {
+        loadConfiguration()
+    }
+
+    private fun loadConfiguration() {
+        val configurations = configurationRepository.findAll()
+        configurations.forEach { config ->
+            properties[config.propertyName] = config.propertyValue
+        }
+    }
+}
+
+
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+class ConfigurationController(private val configurationService: ConfigurationService) {
+
+    @GetMapping("/config/{propertyName}")
+    fun getProperty(@PathVariable propertyName: String): String? {
+        return configurationService.getProperty(propertyName)
+    }
+}
+
+

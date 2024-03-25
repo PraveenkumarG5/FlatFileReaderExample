@@ -68,5 +68,198 @@ class ConfigurationController(private val configurationService: ConfigurationSer
         return configurationService.getProperty(propertyName)
     }
 }
+-----------------------------------------------------------------------------
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Service
+
+@Service
+class ConfigurationService(
+    private val configurationRepository: ConfigurationRepository,
+    private val myAppProperties: MyAppProperties
+) {
+
+    @Scheduled(fixedRate = 60000) // Adjust the rate as needed
+    fun updatePropertiesFromDatabase() {
+        val configurations = configurationRepository.findAll()
+        configurations.forEach { config ->
+            when (config.key) {
+                "property1" -> myAppProperties.property1 = config.value
+                "property2" -> myAppProperties.property2 = config.value
+                // Add more properties as needed
+            }
+        }
+    }
+}
+
+
+--------------------------------------------------------------
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.cloud.context.config.annotation.RefreshScope
+import org.springframework.stereotype.Component
+
+@Component
+@RefreshScope
+@ConfigurationProperties(prefix = "myapp")
+data class MyProperties(
+    var property1: String = "",
+    var property2: String = ""
+)
+
+
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.cloud.context.config.annotation.RefreshScope
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Service
+
+@Service
+@RefreshScope
+class ConfigurationService(private val configurationRepository: ConfigurationRepository, private val myProperties: MyProperties) {
+
+    @Scheduled(fixedDelay = 60000) // Check for updates every minute
+    fun reloadConfiguration() {
+        val configs = configurationRepository.findAll()
+        configs.forEach { config ->
+            when (config.propertyName) {
+                "property1" -> myProperties.property1 = config.propertyValue
+                "property2" -> myProperties.property2 = config.propertyValue
+                // Add more properties as needed
+            }
+        }
+    }
+}
+
+-------------------------------------------------------------------
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.cloud.context.config.annotation.RefreshScope
+import org.springframework.stereotype.Component
+
+@Component
+@RefreshScope
+@ConfigurationProperties(prefix = "myapp")
+data class MyProperties(
+    var property1: String = "",
+    var property2: String = ""
+)
+
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cloud.context.refresh.ContextRefresher
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+class RefreshController(private val contextRefresher: ContextRefresher) {
+
+    @PostMapping("/refresh")
+    fun refresh(): String {
+        val refreshed = contextRefresher.refresh()
+        return if (refreshed) "Refreshed successfully" else "No beans refreshed"
+    }
+}
+
+----------------------------------------------------------------------------
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cloud.context.refresh.ContextRefresher
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+class RefreshController(private val contextRefresher: ContextRefresher) {
+
+    @PostMapping("/refresh")
+    fun refresh(): String {
+        val refreshed = contextRefresher.refresh()
+        return if (refreshed) "Refreshed successfully" else "No beans refreshed"
+    }
+}
+
+
+------------------------------------------------------
+------------------------------------------------------
+
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.stereotype.Component
+
+@Component
+@ConfigurationProperties(prefix = "myapp")
+data class MyProperties(
+    var property1: String = "",
+    var property2: String = ""
+)
+
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Service
+
+@Service
+@EnableConfigurationProperties(MyProperties::class)
+class ConfigurationService(
+    @Autowired private val configurationRepository: ConfigurationRepository,
+    @Autowired private val myProperties: MyProperties
+) {
+
+    @Scheduled(fixedRate = 60000) // Refresh every minute
+    fun refreshProperties() {
+        val configurations = configurationRepository.findAll()
+        configurations.forEach { config ->
+            when (config.propertyName) {
+                "property1" -> myProperties.property1 = config.propertyValue
+                "property2" -> myProperties.property2 = config.propertyValue
+                // Add more properties as needed
+            }
+        }
+    }
+}
+
+
+
+
+....
+
+import org.springframework.cloud.context.config.annotation.RefreshScope
+import org.springframework.stereotype.Service
+
+@Service
+@RefreshScope
+class MyPropertiesService(private val myProperties: MyProperties) {
+
+    fun getProperty1(): String {
+        return myProperties.property1
+    }
+
+    fun getProperty2(): String {
+        return myProperties.property2
+    }
+}
+
+------------
+-
+---
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Service
+
+@Service
+@EnableConfigurationProperties(MyAppProperties::class)
+class MyAppPropertiesService(
+    private val appPropertyRepository: AppPropertyRepository,
+    private val myAppProperties: MyAppProperties
+) {
+
+    @Scheduled(fixedRate = 60000) // Refresh every minute
+    fun refreshProperties() {
+        val propertiesFromDb = appPropertyRepository.findAll()
+        propertiesFromDb.forEach { property ->
+            when (property.propertyKey) {
+                "property1" -> myAppProperties.property1 = property.propertyValue
+                "property2" -> myAppProperties.property2 = property.propertyValue
+                // Add more properties as needed
+            }
+        }
+    }
+}
 
 

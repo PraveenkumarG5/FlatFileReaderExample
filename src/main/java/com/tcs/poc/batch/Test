@@ -1,0 +1,113 @@
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class StrictDeserializationTest {
+
+    private ObjectMapper objectMapper;
+
+    // Test DTO with different field types
+    static class TestDto {
+        private String stringField;
+        private Integer numberField;
+        private Boolean booleanField;
+
+        // Getters and setters
+        public String getStringField() { return stringField; }
+        public void setStringField(String stringField) { this.stringField = stringField; }
+        public Integer getNumberField() { return numberField; }
+        public void setNumberField(Integer numberField) { this.numberField = numberField; }
+        public Boolean getBooleanField() { return booleanField; }
+        public void setBooleanField(Boolean booleanField) { this.booleanField = booleanField; }
+    }
+
+    @BeforeEach
+    void setup() {
+        // Create ObjectMapper with strict configuration
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new StrictTypeModule());
+        objectMapper.disable(
+            com.fasterxml.jackson.databind.MapperFeature.ALLOW_COERCION_OF_SCALARS
+        );
+        objectMapper.disable(
+            com.fasterxml.jackson.databind.DeserializationFeature.ACCEPT_FLOAT_AS_INT
+        );
+    }
+
+    @Test
+    void testValidInput() throws Exception {
+        String validJson = """
+            {
+                "stringField": "test",
+                "numberField": 123,
+                "booleanField": true
+            }
+            """;
+
+        TestDto dto = objectMapper.readValue(validJson, TestDto.class);
+
+        assertEquals("test", dto.getStringField());
+        assertEquals(123, dto.getNumberField());
+        assertTrue(dto.getBooleanField());
+    }
+
+    @Test
+    void testInvalidStringField() {
+        String invalidJson = """
+            {
+                "stringField": 12345,
+                "numberField": 456,
+                "booleanField": false
+            }
+            """;
+
+        JsonProcessingException exception = assertThrows(
+            JsonProcessingException.class,
+            () -> objectMapper.readValue(invalidJson, TestDto.class)
+        );
+
+        assertTrue(exception.getMessage().contains("must be a string"));
+        assertTrue(exception.getCause() instanceof MismatchedInputException);
+    }
+
+    @Test
+    void testInvalidNumberField() {
+        String invalidJson = """
+            {
+                "stringField": "valid",
+                "numberField": "not-a-number",
+                "booleanField": true
+            }
+            """;
+
+        JsonProcessingException exception = assertThrows(
+            JsonProcessingException.class,
+            () -> objectMapper.readValue(invalidJson, TestDto.class)
+        );
+
+        assertTrue(exception.getMessage().contains("must be a number"));
+        assertTrue(exception.getCause() instanceof MismatchedInputException);
+    }
+
+    @Test
+    void testInvalidBooleanField() {
+        String invalidJson = """
+            {
+                "stringField": "test",
+                "numberField": 789,
+                "booleanField": "true"
+            }
+            """;
+
+        JsonProcessingException exception = assertThrows(
+            JsonProcessingException.class,
+            () -> objectMapper.readValue(invalidJson, TestDto.class)
+        );
+
+        assertTrue(exception.getMessage().contains("must be a boolean"));
+        assertTrue(exception.getCause() instanceof MismatchedInputException);
+    }
+}

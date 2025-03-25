@@ -418,3 +418,36 @@ public class StrictTypeModule extends com.fasterxml.jackson.databind.Module {
         }
     }
 }
+//////////////////////////////////////////
+
+{{#*inline "dataClass"}}
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
+@JsonPropertyOrder(alphabetic = true)
+{{#hasVars}}data {{/hasVars}}class {{classname}} @JsonCreator constructor (
+    {{#vars}}
+    @param:JsonProperty("{{baseName}}")
+    {{#isBeanValidation}}@field:Valid{{/isBeanValidation}}
+    {{#isContainer}}@field:Valid{{/isContainer}}
+    @JsonProperty("{{baseName}}")
+    {{#required}}@field:NotNull {{/required}}
+    {{#isReadOnly}}@field:JsonProperty(access = JsonProperty.Access.READ_ONLY) {{/isReadOnly}}
+    {{#isInherited}}override {{/isInherited}}var {{name}}: {{#isEnum}}{{classname}}.{{{datatypeWithEnum}}}{{/isEnum}}{{^isEnum}}{{{datatype}}}{{/isEnum}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{^defaultValue}}? = null{{/defaultValue}}{{^-last}},{{/-last}}
+    {{/vars}}
+) {{#hasSuperclass}} : {{superclass}}{{#hasInterfaces}}, {{/hasInterfaces}}{{/hasSuperclass}}{{#hasInterfaces}}{{#interfaces}}{{.}}{{^-last}}, {{/-last}}{{/interfaces}}{{/hasInterfaces}} {
+
+    {{#vars}}
+    {{^isInherited}}
+    {{#isEnum}}
+    enum class {{{datatypeWithEnum}}}(val value: {{dataType}}) {
+        {{#allowableValues}}
+        {{#enumVars}}
+        @JsonProperty(value = {{^isString}}"{{/isString}}{{{value}}}{{^isString}}"{{/isString}})
+        {{name}}({{{value}}}){{^-last}},{{/-last}}
+        {{/enumVars}}
+        {{/allowableValues}}
+    }
+    {{/isEnum}}
+    {{/isInherited}}
+    {{/vars}}
+}
+{{/inline}}

@@ -451,3 +451,58 @@ public class StrictTypeModule extends com.fasterxml.jackson.databind.Module {
     {{/vars}}
 }
 {{/inline}}
+
+
+////////////////////////
+
+package {{package}}
+
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
+import java.util.Objects
+{{#imports}}import {{import}}
+{{/imports}}
+{{#serializableModel}}
+import java.io.Serializable
+{{/serializableModel}}
+{{#useBeanValidation}}
+import {{javaxPackage}}.validation.constraints.*
+import {{javaxPackage}}.validation.Valid
+{{/useBeanValidation}}
+{{#swagger2AnnotationLibrary}}
+import io.swagger.v3.oas.annotations.media.Schema
+{{/swagger2AnnotationLibrary}}
+{{#swagger1AnnotationLibrary}}
+import io.swagger.annotations.ApiModelProperty
+{{/swagger1AnnotationLibrary}}
+
+{{#models}}
+{{#model}}
+{{#isEnum}}
+{{>enumClass}}
+{{/isEnum}}
+{{^isEnum}}
+
+{{#*inline "dataClass"}}  // Define the inline partial correctly
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
+@JsonPropertyOrder(alphabetic = true)
+{{#hasVars}}data {{/hasVars}}class {{classname}} @JsonCreator constructor (
+    {{#vars}}
+    @param:JsonProperty("{{baseName}}")
+    {{#isBeanValidation}}@field:Valid{{/isBeanValidation}}
+    {{#isContainer}}@field:Valid{{/isContainer}}
+    @JsonProperty("{{baseName}}")
+    {{#required}}@field:NotNull {{/required}}
+    {{#isReadOnly}}@field:JsonProperty(access = JsonProperty.Access.READ_ONLY) {{/isReadOnly}}
+    {{#isInherited}}override {{/isInherited}}val {{name}}: {{#isEnum}}{{classname}}.{{{datatypeWithEnum}}}{{/isEnum}}{{^isEnum}}{{{datatype}}}{{/isEnum}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{^defaultValue}}? = null{{/defaultValue}}{{^-last}},{{/-last}}
+    {{/vars}}
+) {{#hasSuperclass}} : {{superclass}}{{#hasInterfaces}}, {{/hasInterfaces}}{{/hasSuperclass}}{{#hasInterfaces}}{{#interfaces}}{{.}}{{^-last}}, {{/-last}}{{/interfaces}}{{/hasInterfaces}} {
+}
+{{/inline}}  // Correctly close the inline section
+
+{{>dataClass}}  // Use the inline partial for the actual class generation
+{{/isEnum}}
+{{/model}}
+{{/models}}

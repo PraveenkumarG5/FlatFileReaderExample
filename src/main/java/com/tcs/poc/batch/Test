@@ -111,3 +111,310 @@ class StrictDeserializationTest {
         assertTrue(exception.getCause() instanceof MismatchedInputException);
     }
 }
+
+
+----\\
+
+
+private static class StrictTypeDeserializer<T> extends JsonDeserializer<T> {
+    private final JsonDeserializer<T> delegate;
+
+    public StrictTypeDeserializer(JsonDeserializer<T> delegate) {
+        this.delegate = delegate;
+    }
+
+    @Override
+    public T deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        JavaType targetType = ctxt.getContextualType() != null
+            ? ctxt.getContextualType()
+            : ctxt.getTypeFactory().constructType(delegate.handledType());
+
+        // Check token type before delegating to the original deserializer
+        checkTokenType(targetType, p.currentToken(), p, ctxt);
+        return delegate.deserialize(p, ctxt);
+    }
+
+    private void checkTokenType(
+        JavaType targetType,
+        JsonToken currentToken,
+        JsonParser p,
+        DeserializationContext ctxt
+    ) throws IOException {
+        Class<?> rawType = targetType.getRawClass();
+
+        if (rawType == String.class) {
+            if (currentToken != JsonToken.VALUE_STRING) {
+                throwMismatch(p, ctxt, targetType, currentToken, "string");
+            }
+        } else if (isNumberType(rawType)) {
+            if (!currentToken.isNumeric()) {
+                throwMismatch(p, ctxt, targetType, currentToken, "number");
+            }
+        } else if (rawType == Boolean.class || rawType == boolean.class) {
+            if (currentToken != JsonToken.VALUE_TRUE && currentToken != JsonToken.VALUE_FALSE) {
+                throwMismatch(p, ctxt, targetType, currentToken, "boolean");
+            }
+        }
+        // Add checks for other types (e.g., dates) if needed
+    }
+
+    private void throwMismatch(
+        JsonParser p,
+        DeserializationContext ctxt,
+        JavaType targetType,
+        JsonToken currentToken,
+        String expectedType
+    ) throws IOException {
+        String fieldName = p.currentName() != null ? "Field '" + p.currentName() + "'" : "Value";
+        String msg = String.format(
+            "%s must be a %s (got %s)",
+            fieldName, expectedType, currentToken
+        );
+        throw ctxt.wrongTokenException(p, targetType, currentToken, msg);
+    }
+
+    private boolean isNumberType(Class<?> clazz) {
+        return clazz.isPrimitive() ? isPrimitiveNumber(clazz) : isWrapperNumber(clazz);
+    }
+
+    private boolean isPrimitiveNumber(Class<?> clazz) {
+        return clazz == int.class || clazz == long.class || clazz == double.class
+            || clazz == float.class || clazz == short.class || clazz == byte.class;
+    }
+
+    private boolean isWrapperNumber(Class<?> clazz) {
+        return clazz == Integer.class || clazz == Long.class || clazz == Double.class
+            || clazz == Float.class || clazz == Short.class || clazz == Byte.class
+            || clazz == java.math.BigDecimal.class || clazz == java.math.BigInteger.class;
+    }
+}
+
+
+---------
+
+private static class StrictDeserializers extends Deserializers.Base {
+    @Override
+    public JsonDeserializer<?> findBeanDeserializer(
+        JavaType type,
+        DeserializationConfig config,
+        BeanDescription beanDesc
+    ) {
+        JsonDeserializer<?> deserializer = super.findBeanDeserializer(type, config, beanDesc);
+        return wrapDeserializer(deserializer);
+    }
+
+    @Override
+    public JsonDeserializer<?> findEnumDeserializer(
+        Class<?> type,
+        DeserializationConfig config,
+        BeanDescription beanDesc
+    ) {
+        JsonDeserializer<?> deserializer = super.findEnumDeserializer(type, config, beanDesc);
+        return wrapDeserializer(deserializer);
+    }
+
+    @Override
+    public JsonDeserializer<?> findTreeNodeDeserializer(
+        Class<? extends JsonNode> nodeType,
+        DeserializationConfig config,
+        BeanDescription beanDesc
+    ) {
+        JsonDeserializer<?> deserializer = super.findTreeNodeDeserializer(nodeType, config, beanDesc);
+        return wrapDeserializer(deserializer);
+    }
+
+    // Override methods for arrays, maps, and other types
+    @Override
+    public JsonDeserializer<?> findArrayDeserializer(
+        ArrayType arrayType,
+        DeserializationConfig config,
+        BeanDescription beanDesc,
+        TypeDeserializer elementTypeDeserializer,
+        JsonDeserializer<?> elementDeserializer
+    ) {
+        JsonDeserializer<?> deserializer = super.findArrayDeserializer(
+            arrayType, config, beanDesc, elementTypeDeserializer, elementDeserializer
+        );
+        return wrapDeserializer(deserializer);
+    }
+
+    @Override
+    public JsonDeserializer<?> findMapDeserializer(
+        MapLikeType mapType,
+        DeserializationConfig config,
+        BeanDescription beanDesc,
+        KeyDeserializer keyDeserializer,
+        TypeDeserializer elementTypeDeserializer,
+        JsonDeserializer<?> elementDeserializer
+    ) {
+        JsonDeserializer<?> deserializer = super.findMapDeserializer(
+            mapType, config, beanDesc, keyDeserializer, elementTypeDeserializer, elementDeserializer
+        );
+        return wrapDeserializer(deserializer);
+    }
+
+    @Override
+    public JsonDeserializer<?> findReferenceDeserializer(
+        ReferenceType refType,
+        DeserializationConfig config,
+        BeanDescription beanDesc,
+        TypeDeserializer contentTypeDeserializer,
+        JsonDeserializer<?> contentDeserializer
+    ) {
+        JsonDeserializer<?> deserializer = super.findReferenceDeserializer(
+            refType, config, beanDesc, contentTypeDeserializer, contentDeserializer
+        );
+        return wrapDeserializer(deserializer);
+    }
+
+    private JsonDeserializer<?> wrapDeserializer(JsonDeserializer<?> deserializer) {
+        return deserializer != null ? new StrictTypeDeserializer<>(deserializer) : null;
+    }
+}
+////////////////////////////////////////////////////////////////////////////////////////////
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.deser.Deserializers;
+import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
+import com.fasterxml.jackson.databind.type.*;
+
+import java.io.IOException;
+
+public class StrictTypeModule extends com.fasterxml.jackson.databind.Module {
+    @Override
+    public String getModuleName() {
+        return "StrictTypeModule";
+    }
+
+    @Override
+    public Version version() {
+        return Version.unknownVersion();
+    }
+
+    @Override
+    public void setupModule(SetupContext context) {
+        context.addDeserializers(new StrictDeserializers());
+    }
+
+    private static class StrictDeserializers extends Deserializers.Base {
+        @Override
+        public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config, BeanDescription beanDesc) {
+            return wrap(super.findBeanDeserializer(type, config, beanDesc));
+        }
+
+        @Override
+        public JsonDeserializer<?> findEnumDeserializer(Class<?> type, DeserializationConfig config, BeanDescription beanDesc) {
+            return wrap(super.findEnumDeserializer(type, config, beanDesc));
+        }
+
+        @Override
+        public JsonDeserializer<?> findTreeNodeDeserializer(Class<? extends JsonNode> nodeType, DeserializationConfig config, BeanDescription beanDesc) {
+            return wrap(super.findTreeNodeDeserializer(nodeType, config, beanDesc));
+        }
+
+        @Override
+        public JsonDeserializer<?> findArrayDeserializer(ArrayType type, DeserializationConfig config, BeanDescription beanDesc, TypeDeserializer elementTypeDeserializer, JsonDeserializer<?> elementDeserializer) {
+            return wrap(super.findArrayDeserializer(type, config, beanDesc, elementTypeDeserializer, elementDeserializer));
+        }
+
+        @Override
+        public JsonDeserializer<?> findMapDeserializer(MapLikeType type, DeserializationConfig config, BeanDescription beanDesc, KeyDeserializer keyDeserializer, TypeDeserializer elementTypeDeserializer, JsonDeserializer<?> elementDeserializer) {
+            return wrap(super.findMapDeserializer(type, config, beanDesc, keyDeserializer, elementTypeDeserializer, elementDeserializer));
+        }
+
+        @Override
+        public JsonDeserializer<?> findReferenceDeserializer(ReferenceType type, DeserializationConfig config, BeanDescription beanDesc, TypeDeserializer contentTypeDeserializer, JsonDeserializer<?> contentDeserializer) {
+            return wrap(super.findReferenceDeserializer(type, config, beanDesc, contentTypeDeserializer, contentDeserializer));
+        }
+
+        // Add more methods to cover other deserializer types as needed
+
+        private JsonDeserializer<?> wrap(JsonDeserializer<?> deserializer) {
+            return deserializer != null ? new StrictTypeDeserializer<>(deserializer) : null;
+        }
+    }
+
+    private static class StrictTypeDeserializer<T> extends JsonDeserializer<T> {
+        private final JsonDeserializer<T> delegate;
+
+        public StrictTypeDeserializer(JsonDeserializer<T> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public T deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            JavaType targetType = ctxt.getContextualType() != null
+                ? ctxt.getContextualType()
+                : ctxt.getTypeFactory().constructType(delegate.handledType());
+
+            checkTokenType(targetType, p.currentToken(), p, ctxt);
+            return delegate.deserialize(p, ctxt);
+        }
+
+        @Override
+        public T deserialize(JsonParser p, DeserializationContext ctxt, T intoValue) throws IOException {
+            JavaType targetType = ctxt.getContextualType() != null
+                ? ctxt.getContextualType()
+                : ctxt.getTypeFactory().constructType(delegate.handledType());
+
+            checkTokenType(targetType, p.currentToken(), p, ctxt);
+            return delegate.deserialize(p, ctxt, intoValue);
+        }
+
+        @Override
+        public Object deserializeWithType(JsonParser p, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException {
+            JavaType targetType = ctxt.getContextualType() != null
+                ? ctxt.getContextualType()
+                : ctxt.getTypeFactory().constructType(delegate.handledType());
+
+            checkTokenType(targetType, p.currentToken(), p, ctxt);
+            return delegate.deserializeWithType(p, ctxt, typeDeserializer);
+        }
+
+        private void checkTokenType(JavaType targetType, JsonToken currentToken, JsonParser p, DeserializationContext ctxt) throws IOException {
+            Class<?> rawType = targetType.getRawClass();
+
+            if (rawType == String.class) {
+                if (currentToken != JsonToken.VALUE_STRING) {
+                    throwMismatch(p, ctxt, targetType, currentToken, "string");
+                }
+            } else if (isNumberType(rawType)) {
+                if (!currentToken.isNumeric()) {
+                    throwMismatch(p, ctxt, targetType, currentToken, "number");
+                }
+            } else if (rawType == Boolean.class || rawType == boolean.class) {
+                if (currentToken != JsonToken.VALUE_TRUE && currentToken != JsonToken.VALUE_FALSE) {
+                    throwMismatch(p, ctxt, targetType, currentToken, "boolean");
+                }
+            }
+            // Extend with other types as necessary
+        }
+
+        private void throwMismatch(JsonParser p, DeserializationContext ctxt, JavaType targetType, JsonToken currentToken, String expectedType) throws IOException {
+            String fieldName = p.currentName() != null ? "Field '" + p.currentName() + "'" : "Value";
+            String msg = String.format("%s must be a %s (got %s)", fieldName, expectedType, currentToken);
+            throw ctxt.wrongTokenException(p, targetType, currentToken, msg);
+        }
+
+        private boolean isNumberType(Class<?> clazz) {
+            return clazz.isPrimitive() ? isPrimitiveNumber(clazz) : isWrapperNumber(clazz);
+        }
+
+        private boolean isPrimitiveNumber(Class<?> clazz) {
+            return clazz == int.class || clazz == long.class || clazz == double.class
+                || clazz == float.class || clazz == short.class || clazz == byte.class;
+        }
+
+        private boolean isWrapperNumber(Class<?> clazz) {
+            return clazz == Integer.class || clazz == Long.class || clazz == Double.class
+                || clazz == Float.class || clazz == Short.class || clazz == Byte.class
+                || clazz == java.math.BigDecimal.class || clazz == java.math.BigInteger.class;
+        }
+
+        @Override
+        public Class<?> handledType() {
+            return delegate.handledType();
+        }
+    }
+}

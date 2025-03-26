@@ -23,3 +23,85 @@ export const {{classname}}Schema = z.object({
 {{/isEnum}}
 {{/model}}
 {{/models}}
+
+
+////////////////////////////////
+
+
+import { z } from 'zod';
+
+export const {{classname}}Schema = z.object({
+{{#vars}}
+  {{name}}: {{#isString}}z.string(){{/isString}}{{#isNumber}}z.number(){{/isNumber}}{{#isBoolean}}z.boolean(){{/isBoolean}},
+{{/vars}}
+});
+
+
+
+///////////
+
+
+4. Validation Workaround
+If safeParse is still unavailable, use parse (throws errors) or manually validate:
+
+Option 1: Use parse (Throws Errors)
+typescript
+Copy
+try {
+  const validatedData = AmountSchema.parse(formValue);
+  // Proceed with validated data
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    this.errorMessage = error.errors.map(e => e.message).join(', ');
+  }
+}
+Option 2: Manual Validation
+typescript
+Copy
+const result = AmountSchema.safeParse(formValue);
+if (result.success) {
+  // Valid data: result.data
+} else {
+  // Errors: result.error
+}
+Example of Correct Usage
+typescript
+Copy
+// Generated Zod schema (e.g., AmountSchema.ts)
+import { z } from 'zod';
+
+export const AmountSchema = z.object({
+  value: z.string().regex(/^\d+\.?\d*$/),
+  currency: z.string().length(3),
+});
+
+// In your component
+const validation = AmountSchema.safeParse({ value: '123.45', currency: 'USD' });
+
+if (validation.success) {
+  console.log('Valid:', validation.data);
+} else {
+  console.error('Errors:', validation.error.errors);
+}
+Troubleshooting Checklist
+Verify Zod Version:
+
+bash
+Copy
+npm list zod
+Ensure it’s ^3.0.0.
+
+Check Schema Structure:
+Confirm your generated schemas use z.object() (not primitive schemas like z.string() standalone).
+
+Update Dependencies:
+
+bash
+Copy
+npm update zod @anatine/zod-openapi
+Final Notes
+Angular/Zod Integration: Use safeParse for validation in Angular forms/services.
+
+OpenAPI Spec: Ensure your spec defines type: string and format: decimal for fields like value.
+
+If the issue persists, share your package.json and generated Zod schema code for further debugging!

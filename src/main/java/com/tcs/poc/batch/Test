@@ -490,4 +490,91 @@ public class StrictTypeModule extends com.fasterxml.jackson.databind.Module {
     {{/vars}}
 }
 
+/////////////////
+
+
+package {{package}}
+
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
+import java.util.Objects
+{{#imports}}import {{import}}
+{{/imports}}
+{{#serializableModel}}
+import java.io.Serializable
+{{/serializableModel}}
+{{#useBeanValidation}}
+import {{javaxPackage}}.validation.constraints.DecimalMax
+import {{javaxPackage}}.validation.constraints.DecimalMin
+import {{javaxPackage}}.validation.constraints.Email
+import {{javaxPackage}}.validation.constraints.Max
+import {{javaxPackage}}.validation.constraints.Min
+import {{javaxPackage}}.validation.constraints.NotNull
+import {{javaxPackage}}.validation.constraints.Pattern
+import {{javaxPackage}}.validation.constraints.Size
+import {{javaxPackage}}.validation.Valid
+{{/useBeanValidation}}
+{{#swagger2AnnotationLibrary}}
+import io.swagger.v3.oas.annotations.media.Schema
+{{/swagger2AnnotationLibrary}}
+
+{{#modelDocs}}
+/**
+ * {{description}}
+ */
+{{#isDeprecated}}
+@Deprecated
+{{/isDeprecated}}
+{{#swagger2AnnotationLibrary}}
+@Schema(description = "{{description}}")
+{{/swagger2AnnotationLibrary}}
+{{/modelDocs}}
+data class {{classname}} @JsonCreator constructor(
+    {{#vars}}
+    @JsonProperty("{{baseName}}")
+    {{#required}}
+    @field:NotNull
+    {{/required}}
+    {{#isDeprecated}}
+    @Deprecated
+    {{/isDeprecated}}
+    {{#swagger2AnnotationLibrary}}
+    @Schema(description = "{{description}}")
+    {{/swagger2AnnotationLibrary}}
+    val {{name}}: {{datatype}}{{#defaultValue}} = {{defaultValue}}{{/defaultValue}}{{#hasMore}},{{/hasMore}}
+    {{/vars}}
+){{#serializableModel}} : Serializable{{/serializableModel}} {
+    {{#hasVars}}
+    {{#additionalProperties}}
+    private val additionalProperties: MutableMap<String, Any> = HashMap()
+
+    fun putAdditionalProperty(key: String, value: Any): {{classname}} {
+        additionalProperties[key] = value
+        return this
+    }
+
+    fun getAdditionalProperty(key: String): Any? {
+        return additionalProperties[key]
+    }
+    {{/additionalProperties}}
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is {{classname}}) return false
+        return {{#vars}}Objects.equals({{name}}, other.{{name}}){{#hasMore}} &&
+        {{/hasMore}}{{/vars}}
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash({{#vars}}{{name}}{{#hasMore}}, {{/hasMore}}{{/vars}})
+    }
+
+    override fun toString(): String {
+        return "class {{classname}} {\n" +
+        {{#vars}} "    {{name}}: ${{name}}\n" +
+        {{/vars}} "}"
+    }
+    {{/hasVars}}
+}
+
 
